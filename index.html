@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Game of Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="game-of-life.js"></script>
+</head>
+<body>
+    <h1>Game of Life</h1>
+    <script>
+        // define the grid size
+        const gridSize = 20;
+        let grid = new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0));
+        
+        // inital a live cells
+        grid[1][1] = 1;
+        grid[10][10] = 1;
+        grid[11][10] = 1;
+        grid[9][10] = 1;
+        grid[11][9] = 1;
+        grid[10][8] = 1;
+
+        // initialize game of life
+        const gameOfLife = new GameOfLife(grid);
+
+        // cells that live on the next cycle
+        grid = gameOfLife.getNextGeneration();
+        
+        console.table(grid);
+    </script>
+</body>
+</html>
