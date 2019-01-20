@@ -1,34 +1,330 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Game of Life</title>
+    <title>Game of Life with Three JS CSS3 Object</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="game-of-life.js"></script>
+    <script src="libs/three.min.js"></script>
+    <script src="libs/controls/TrackballControls.js"></script>
+    <script src="libs/renderers/CSS3DRenderer.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            background-color: black;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .element {
+            width: 120px;
+            height: 160px;
+            box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.5);
+            border: 1px solid rgba(127, 255, 255, 0.25);
+            text-align: center;
+            cursor: default;
+        }
+
+        .info {
+            position: absolute;
+            width: 100%;
+            color: #ffffff;
+            padding: 5px;
+            font-family: sans-serif;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .menu {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .menu-text {
+            color: white;
+        }
+
+        .alive {
+            background-color: rgba(0, 127, 127, 0.9);
+        }
+
+        .dead {
+            background-color: rgba(0, 0, 0, 0);
+        }
+    </style>
 </head>
 <body>
-    <h1>Game of Life</h1>
-    <script>
-        // define the grid size
-        const gridSize = 20;
-        let grid = new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0));
-        
-        // inital a live cells
-        grid[1][1] = 1;
-        grid[10][10] = 1;
-        grid[11][10] = 1;
-        grid[9][10] = 1;
-        grid[11][9] = 1;
-        grid[10][8] = 1;
+<h1 class="info">Conway's Game of Life</h1>
 
-        // initialize game of life
-        const gameOfLife = new GameOfLife(grid);
+<div class="menu">
+    <span class="menu-text">Predefine Pattern: </span>
+    <select id="selectPatternSet" name="predefineSet" onChange="changePredefinePatternSet(this)">
+        <option value="glider">Glider</option>
+        <option value="gliderGun" selected>Glider Gun</option>
+        <option value="spaceShip">Space Ship</option>
+        <option value="gardenOfEden">Garden Of Eden</option>
+    </select>
+    <button id="btnPlayOrPause" onclick="renderPause(); changePausePlayText(this);">Pause</button>
+    <button id="btnNextGeneration" onclick="renderNextGeneration(false)">NextGeneration</button>
+</div>
 
-        // cells that live on the next cycle
-        grid = gameOfLife.getNextGeneration();
-        
-        console.table(grid);
-    </script>
+<div id="container"></div>
+
+<script>
+    const gridSize = 22;
+    const defaultPatternSet = document.getElementById('selectPatternSet').value;
+    const gameOfLife = new GameOfLife(getPredefinePatternSet(defaultPatternSet));
+    const css3ObjectPositionX = 1600;
+    const css3ObjectPositionY = 2100;
+    let camera;
+    let scene;
+    let renderer;
+    let controls;
+    let pause = false;
+
+    initializeScene();
+    animate();
+    setInterval(renderNextGeneration, 300);
+
+    function getCSS3Objects() {
+        return gameOfLife.getGrid().map((cells, row) => cells.map((cell, col) => {
+            const element = document.createElement('div');
+            const cssClassNameAliveOrDead = cell === 1 ? 'alive' : 'dead';
+
+            element.classList.add('element', cssClassNameAliveOrDead);
+
+            const css3Object = new THREE.CSS3DObject(element);
+            css3Object.position.x = ((col + 1) * 140) - css3ObjectPositionX;
+            css3Object.position.y = -((row + 1) * 180) + css3ObjectPositionY;
+
+            return css3Object;
+        })).flat();
+    }
+
+    function initializeScene() {
+        // create camera
+        camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 10, 10000);
+        camera.position.z = 6000;
+
+        // create scene and add css3 objects
+        scene = new THREE.Scene();
+        scene.add(...getCSS3Objects());
+
+        // create renderer
+        renderer = new THREE.CSS3DRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // create track ball controller
+        controls = new THREE.TrackballControls(camera, renderer.domElement);
+        controls.rotateSpeed = 0.5;
+        controls.minDistance = 500;
+        controls.maxDistance = 6000;
+        controls.addEventListener('change', render);
+
+        render();
+
+        //
+        window.addEventListener('resize', onWindowResize, false);
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        render();
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+    }
+
+    function redrawSceneObjects() {
+        const grid = gameOfLife.getNextGeneration();
+
+        grid.forEach((cells, row) => cells.forEach((cell, col) => {
+            const offset = row * gridSize + col;
+            const el = scene.children[offset].element;
+            const cssClassName = cell === 1 ? 'alive' : 'dead';
+
+            // remove previous
+            el.classList.remove('alive');
+            el.classList.remove('dead');
+
+            // set new css class name
+            el.classList.add(cssClassName);
+        }));
+    }
+
+    function render() {
+        renderer.render(scene, camera);
+    }
+
+    function renderPause() {
+        pause = !pause;
+    }
+
+    function renderNextGeneration(checkForPause = true) {
+        if (checkForPause && pause) {
+            return;
+        }
+
+        redrawSceneObjects();
+        render();
+    }
+
+    function getNewGrid() {
+        return new Array(gridSize).fill(0).map(() => new Array(gridSize).fill(0))
+    }
+
+    function getPredefinePatternSet(predefineSet) {
+        const gliderGun = {
+            '4,3': 1,
+            '5,2': 1,
+            '5,3': 1,
+            '1,14': 1,
+            '1,15': 1,
+            '2,13': 1,
+            '3,12': 1,
+            '4,12': 1,
+            '5,12': 1,
+            '6,13': 1,
+            '7,14': 1,
+            '7,15': 1
+        };
+
+        const glider = {
+            '10,10': 1,
+            '11,10': 1,
+            '9,10': 1,
+            '11,9': 1,
+            '10,8': 1
+        };
+
+        const spaceShip = {
+            '1,5': 1,
+            '2,6': 1,
+            '3,6': 1,
+            '3,2': 1,
+            '4,3': 1,
+            '4,4': 1,
+            '4,5': 1,
+            '4,6': 1,
+            '11,5': 1,
+            '12,6': 1,
+            '13,6': 1,
+            '13,2': 1,
+            '14,3': 1,
+            '14,4': 1,
+            '14,5': 1,
+            '14,6': 1,
+        };
+
+        const gardenOfEden = {
+            '8,7': 1,
+            '8,9': 1,
+            '8,10': 1,
+            '8,12': 1,
+            '8,13': 1,
+            '8,16': 1,
+            '9,8': 1,
+            '9,10': 1,
+            '9,11': 1,
+            '9,12': 1,
+            '9,14': 1,
+            '9,15': 1,
+            '9,16': 1,
+            '10,8': 1,
+            '10,9': 1,
+            '10,11': 1,
+            '10,12': 1,
+            '10,13': 1,
+            '10,15': 1,
+            '10,17': 1,
+            '11,7': 1,
+            '11,9': 1,
+            '11,10': 1,
+            '11,11': 1,
+            '11,13': 1,
+            '11,14': 1,
+            '11,15': 1,
+            '11,17': 1,
+            '12,6': 1,
+            '12,7': 1,
+            '12,8': 1,
+            '12,9': 1,
+            '12,10': 1,
+            '12,13': 1,
+            '12,14': 1,
+            '12,15': 1,
+            '12,16': 1,
+            '13,7': 1,
+            '13,8': 1,
+            '13,10': 1,
+            '13,11': 1,
+            '13,12': 1,
+            '13,14': 1,
+            '13,17': 1,
+            '14,7': 1,
+            '14,8': 1,
+            '14,9': 1,
+            '14,11': 1,
+            '14,13': 1,
+            '14,16': 1,
+            '15,7': 1,
+            '15,8': 1,
+            '15,10': 1,
+            '15,11': 1,
+            '15,12': 1,
+            '15,15': 1,
+            '15,16': 1,
+            '16,6': 1,
+            '16,8': 1,
+            '16,9': 1,
+            '16,10': 1,
+            '16,12': 1,
+            '16,13': 1,
+            '16,14': 1,
+            '16,16': 1,
+            '17,6': 1,
+            '17,9': 1,
+            '17,10': 1,
+            '17,13': 1,
+            '17,15': 1,
+            '17,17': 1,
+            '18,16': 1
+        };
+
+        const predefineSets = {
+            glider,
+            gliderGun,
+            spaceShip,
+            gardenOfEden
+        };
+
+        return getNewGrid().map((cells, row) =>
+            cells.map((_, col) =>
+                (predefineSets[predefineSet] && predefineSets[predefineSet][`${row},${col}`] === 1) ? 1 : 0));
+    }
+
+    function changePredefinePatternSet(el) {
+        gameOfLife.setGrid(getPredefinePatternSet(el.value));
+        renderNextGeneration(false);
+    }
+
+    function changePausePlayText(el) {
+        el.textContent = pause ? 'Play' : 'Pause';
+    }
+</script>
 </body>
 </html>
