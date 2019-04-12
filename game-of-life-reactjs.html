@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Game of life using ReactJS</title>
+    <script src="//unpkg.com/react/umd/react.development.js"></script>
+    <script src="//unpkg.com/react-dom/umd/react-dom.development.js"></script>
+    <script src="//unpkg.com/prop-types/prop-types.js"></script>
+    <script src="//unpkg.com/babel-standalone/babel.js"></script>
+    <style>
+      body {
+        background-color: #000;
+      }
+
+      .info {
+        width: 100%;
+        color: #ffffff;
+        padding: 5px;
+        font-family: sans-serif;
+        font-size: 15px;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      .menu {
+        position: absolute;
+        bottom: 20px;
+        width: 100%;
+        text-align: center;
+        z-index: 1;
+      }
+
+      .menu-text {
+        color: white;
+      }
+
+      .container {
+        margin-top: 64px;
+      }
+
+      .row {
+        display: flex;
+        flex-direction: row;
+        border: 0px solid blue;
+        flex-wrap: nowrap;
+        justify-content: center;
+      }
+
+      .col {
+        box-shadow: 0px 0px 4px rgba(0, 255, 255, 0.2);
+        border: 1px solid rgba(127, 255, 255, 0.25);
+        height: 24px;
+        width: 24px;
+        margin: 2px;
+      }
+
+      .alive {
+        background-color: rgba(0, 127, 127, 0.9);
+      }
+
+      .dead {
+        background-color: rgba(0, 0, 0, 0);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="text/babel">
+      const gliderGun = {
+        "4,3": 1,
+        "5,2": 1,
+        "5,3": 1,
+        "1,14": 1,
+        "1,15": 1,
+        "2,13": 1,
+        "3,12": 1,
+        "4,12": 1,
+        "5,12": 1,
+        "6,13": 1,
+        "7,14": 1,
+        "7,15": 1
+      };
+
+      const glider = {
+        "10,10": 1,
+        "11,10": 1,
+        "9,10": 1,
+        "11,9": 1,
+        "10,8": 1
+      };
+
+      const spaceShip = {
+        "1,5": 1,
+        "2,6": 1,
+        "3,6": 1,
+        "3,2": 1,
+        "4,3": 1,
+        "4,4": 1,
+        "4,5": 1,
+        "4,6": 1,
+        "11,5": 1,
+        "12,6": 1,
+        "13,6": 1,
+        "13,2": 1,
+        "14,3": 1,
+        "14,4": 1,
+        "14,5": 1,
+        "14,6": 1
+      };
+
+      const gardenOfEden = {
+        "8,7": 1,
+        "8,9": 1,
+        "8,10": 1,
+        "8,12": 1,
+        "8,13": 1,
+        "8,16": 1,
+        "9,8": 1,
+        "9,10": 1,
+        "9,11": 1,
+        "9,12": 1,
+        "9,14": 1,
+        "9,15": 1,
+        "9,16": 1,
+        "10,8": 1,
+        "10,9": 1,
+        "10,11": 1,
+        "10,12": 1,
+        "10,13": 1,
+        "10,15": 1,
+        "10,17": 1,
+        "11,7": 1,
+        "11,9": 1,
+        "11,10": 1,
+        "11,11": 1,
+        "11,13": 1,
+        "11,14": 1,
+        "11,15": 1,
+        "11,17": 1,
+        "12,6": 1,
+        "12,7": 1,
+        "12,8": 1,
+        "12,9": 1,
+        "12,10": 1,
+        "12,13": 1,
+        "12,14": 1,
+        "12,15": 1,
+        "12,16": 1,
+        "13,7": 1,
+        "13,8": 1,
+        "13,10": 1,
+        "13,11": 1,
+        "13,12": 1,
+        "13,14": 1,
+        "13,17": 1,
+        "14,7": 1,
+        "14,8": 1,
+        "14,9": 1,
+        "14,11": 1,
+        "14,13": 1,
+        "14,16": 1,
+        "15,7": 1,
+        "15,8": 1,
+        "15,10": 1,
+        "15,11": 1,
+        "15,12": 1,
+        "15,15": 1,
+        "15,16": 1,
+        "16,6": 1,
+        "16,8": 1,
+        "16,9": 1,
+        "16,10": 1,
+        "16,12": 1,
+        "16,13": 1,
+        "16,14": 1,
+        "16,16": 1,
+        "17,6": 1,
+        "17,9": 1,
+        "17,10": 1,
+        "17,13": 1,
+        "17,15": 1,
+        "17,17": 1,
+        "18,16": 1
+      };
+
+      const predefineSets = {
+        gliderGun,
+        glider,
+        spaceShip,
+        gardenOfEden
+      };
+
+      function getPredefinePattern(gridSize, currentPredefineSet) {
+        return new Array(gridSize)
+          .fill(0)
+          .map(() => new Array(gridSize).fill(0))
+          .map((cells, row) =>
+            cells.map((_, col) =>
+              predefineSets[currentPredefineSet][`${row},${col}`] === 1 ? 1 : 0
+            )
+          );
+      }
+
+      function getNextGeneration(data, gridSize) {
+        const isCellALive = (row, col, x, y) => {
+          // in-case of array boundry, neighbour would be on opposite side of the boundary.
+          const neighbourX = (row + x + gridSize) % gridSize;
+          const neighbourY = (col + y + gridSize) % gridSize;
+
+          if (neighbourX !== row || neighbourY !== col) {
+            if (data[neighbourX][neighbourY] === 1) {
+              return true;
+            }
+          }
+
+          return false;
+        };
+
+        const doesLivesOn = (row, col) => {
+          // count the number of live neighbors
+          const neighbourCells = [-1, 0, 1];
+          const numberOfLiveNeighbours = neighbourCells.reduce(
+            (total, x) =>
+              neighbourCells.reduce((count, y) => {
+                if (isCellALive(row, col, x, y)) {
+                  count++;
+                }
+
+                return count;
+              }, total),
+            0
+          );
+
+          // if the cell is living and has 2 or 3 live neighbours
+          if (
+            data[row][col] === 1 &&
+            (numberOfLiveNeighbours === 2 || numberOfLiveNeighbours === 3)
+          ) {
+            return true;
+          }
+
+          // if the cell is dead and has exactly 3 neighbours
+          if (data[row][col] === 0 && numberOfLiveNeighbours === 3) {
+            return true;
+          }
+
+          // otherwise it's either overpopulated or underpopulated
+          // and the cell is dead
+          return false;
+        };
+
+        return data.map((cols, row) =>
+          cols.map((_, col) => (doesLivesOn(row, col) ? 1 : 0))
+        );
+      }
+
+      function GOLMenu(props) {
+        return (
+          <div className="menu">
+            <span className="menu-text">Predefine Pattern: </span>
+            <select
+              value={props.currentPredefineSet}
+              onChange={event =>
+                props.setCurrentPredefineSet(event.target.value)
+              }
+            >
+              {props.predefineSetNames.map(value => (
+                <option value={value} key={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <button onClick={props.pause}>
+              {props.isPause ? "Play" : "Pause"}
+            </button>
+            <button onClick={props.setNextGeneration}>NextGeneration</button>
+          </div>
+        );
+      }
+
+      function GOLGrid(props) {
+        if (!props.data.length) {
+          return null;
+        }
+
+        const getBgColor = val => (val ? "alive" : "dead");
+
+        const range = [...Array(props.gridSize).keys()];
+
+        return (
+          <div className="container">
+            {range.map(rowIndex => (
+              <div className="row" key={`row-${rowIndex}`}>
+                {range.map(colIndex => (
+                  <div
+                    className={`col ${getBgColor(
+                      props.data[rowIndex][colIndex]
+                    )}`}
+                    key={`col-${rowIndex}-${colIndex}`}
+                    onClick={() => props.setCellAlive(rowIndex, colIndex)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      GOLGrid.propTypes = {
+        gridSize: PropTypes.number,
+        data: PropTypes.array
+      };
+
+      function useAnimation(gridSize, isPause, setData) {
+        React.useEffect(() => {
+          if (isPause) {
+            return;
+          }
+
+          const intervalId = setInterval(
+            () =>
+              setData(currentData => getNextGeneration(currentData, gridSize)),
+            300
+          );
+          return () => clearInterval(intervalId);
+        }, [isPause]);
+      }
+
+      function useData(gridSize, currentPredefineSet) {
+        const [data, setData] = React.useState(
+          getPredefinePattern(gridSize, currentPredefineSet)
+        );
+
+        React.useEffect(() => {
+          setData(getPredefinePattern(gridSize, currentPredefineSet));
+        }, [currentPredefineSet]);
+
+        return [data, setData];
+      }
+
+      function App() {
+        const gridSize = 22;
+        const [currentPredefineSet, setCurrentPredefineSet] = React.useState(
+          "glider"
+        );
+        const [isPause, setIsPause] = React.useState(false);
+        const [data, setData] = useData(gridSize, currentPredefineSet);
+        const setCellAlive = (row, col) => {
+            data[row][col] = 1;
+            setData([...data]);
+        }
+
+        useAnimation(gridSize, isPause, setData);
+
+        return (
+          <div>
+            <h1 className="info">
+              Conway's Game of Life - {currentPredefineSet}
+            </h1>
+            <GOLMenu
+              predefineSetNames={Object.keys(predefineSets)}
+              isPause={isPause}
+              setNextGeneration={() =>
+                setData(currentData => getNextGeneration(currentData, gridSize))
+              }
+              pause={() => setIsPause(val => !val)}
+              currentPredefineSet={currentPredefineSet}
+              setCurrentPredefineSet={setCurrentPredefineSet}
+            />
+            <GOLGrid gridSize={gridSize} data={data} setCellAlive={setCellAlive}/>
+          </div>
+        );
+      }
+
+      ReactDOM.render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
